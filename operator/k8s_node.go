@@ -49,13 +49,19 @@ func runNodeWatcher(nodeManager *ipam.NodeManager) error {
 	log.Info("Starting to synchronize k8s nodes to kvstore...")
 
 	serNodes := serializer.NewFunctionQueue(1024)
-
-	ciliumNodeStore, err := store.JoinSharedStore(store.Configuration{
-		Prefix:     nodeStore.NodeStorePrefix,
-		KeyCreator: nodeStore.KeyCreator,
-	})
-	if err != nil {
-		return err
+	var ciliumNodeStore *store.SharedStore
+	if kvstoreEnabled() && option.Config.SyncK8sNodes {
+		log.Info("Starting to synchronize k8s nodes to kvstore...")
+		var err error
+		ciliumNodeStore, err = store.JoinSharedStore(store.Configuration{
+			Prefix:     nodeStore.NodeStorePrefix,
+			KeyCreator: nodeStore.KeyCreator,
+		})
+		if err != nil {
+			return err
+		}
+	} else {
+		log.Info("Starting k8s node watcher...")
 	}
 
 	k8sNodeStore, nodeController := informer.NewInformer(
@@ -68,7 +74,9 @@ func runNodeWatcher(nodeManager *ipam.NodeManager) error {
 				if n := k8s.CopyObjToV1Node(obj); n != nil {
 					serNodes.Enqueue(func() error {
 						nodeNew := k8s.ParseNode(n, source.Kubernetes)
-						ciliumNodeStore.UpdateKeySync(context.TODO(), nodeNew)
+						if kvstoreEnabled() && option.Config.SyncK8sNodes {
+							ciliumNodeStore.UpdateKeySync(context.TODO(), nodeNew)
+						}
 						return nil
 					}, serializer.NoRetry)
 				}
@@ -81,8 +89,10 @@ func runNodeWatcher(nodeManager *ipam.NodeManager) error {
 						}
 
 						serNodes.Enqueue(func() error {
-							newNode := k8s.ParseNode(newNode, source.Kubernetes)
-							ciliumNodeStore.UpdateKeySync(context.TODO(), newNode)
+							if kvstoreEnabled() && option.Config.SyncK8sNodes {
+								newNode := k8s.ParseNode(newNode, source.Kubernetes)
+								ciliumNodeStore.UpdateKeySync(context.TODO(), newNode)
+							}
 							return nil
 						}, serializer.NoRetry)
 					}
@@ -104,8 +114,10 @@ func runNodeWatcher(nodeManager *ipam.NodeManager) error {
 					}
 				}
 				serNodes.Enqueue(func() error {
-					deletedNode := k8s.ParseNode(n, source.Kubernetes)
-					ciliumNodeStore.DeleteLocalKey(context.TODO(), deletedNode)
+					if kvstoreEnabled() && option.Config.SyncK8sNodes {
+						deletedNode := k8s.ParseNode(n, source.Kubernetes)
+						ciliumNodeStore.DeleteLocalKey(context.TODO(), deletedNode)
+					}
 					deleteCiliumNode(nodeManager, n.Name)
 					return nil
 				}, serializer.NoRetry)
@@ -138,18 +150,20 @@ func runNodeWatcher(nodeManager *ipam.NodeManager) error {
 				}
 			}
 
-			listOfK8sNodes := k8sNodeStore.ListKeys()
+			if kvstoreEnabled() && option.Config.SyncK8sNodes {
+				listOfK8sNodes := k8sNodeStore.ListKeys()
 
-			kvStoreNodes := ciliumNodeStore.SharedKeysMap()
-			for _, k8sNode := range listOfK8sNodes {
-				// The remaining kvStoreNodes are leftovers
-				kvStoreNodeName := node.GetKeyNodeName(option.Config.ClusterName, k8sNode)
-				delete(kvStoreNodes, kvStoreNodeName)
-			}
+				kvStoreNodes := ciliumNodeStore.SharedKeysMap()
+				for _, k8sNode := range listOfK8sNodes {
+					// The remaining kvStoreNodes are leftovers
+					kvStoreNodeName := node.GetKeyNodeName(option.Config.ClusterName, k8sNode)
+					delete(kvStoreNodes, kvStoreNodeName)
+				}
 
-			for _, kvStoreNode := range kvStoreNodes {
-				if strings.HasPrefix(kvStoreNode.GetKeyName(), option.Config.ClusterName) {
-					ciliumNodeStore.DeleteLocalKey(context.TODO(), kvStoreNode)
+				for _, kvStoreNode := range kvStoreNodes {
+					if strings.HasPrefix(kvStoreNode.GetKeyName(), option.Config.ClusterName) {
+						ciliumNodeStore.DeleteLocalKey(context.TODO(), kvStoreNode)
+					}
 				}
 			}
 
@@ -157,12 +171,15 @@ func runNodeWatcher(nodeManager *ipam.NodeManager) error {
 		}, serializer.NoRetry)
 	}()
 
-	if option.Config.EnableCNPNodeStatusGC && option.Config.CNPNodeStatusGCInterval != 0 {
-		go runCNPNodeStatusGC("cnp-node-gc", false, ciliumNodeStore)
-	}
+	// FIXME: @aanm add CCNP and CNP node GC for non-kvstore mode
+	if kvstoreEnabled() && option.Config.SyncK8sNodes {
+		if option.Config.EnableCNPNodeStatusGC && option.Config.CNPNodeStatusGCInterval != 0 {
+			go runCNPNodeStatusGC("cnp-node-gc", false, ciliumNodeStore)
+		}
 
-	if option.Config.EnableCCNPNodeStatusGC && option.Config.CNPNodeStatusGCInterval != 0 {
-		go runCNPNodeStatusGC("ccnp-node-gc", true, ciliumNodeStore)
+		if option.Config.EnableCCNPNodeStatusGC && option.Config.CNPNodeStatusGCInterval != 0 {
+			go runCNPNodeStatusGC("ccnp-node-gc", true, ciliumNodeStore)
+		}
 	}
 
 	return nil
