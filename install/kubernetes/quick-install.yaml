@@ -152,7 +152,10 @@ data:
   enable-external-ips: "false"
   enable-node-port: "false"
   node-port-mode: "hybrid"
+  node-port-acceleration: "none"
   enable-auto-protect-node-port-range: "true"
+  k8s-require-ipv4-pod-cidr: "true"
+  k8s-require-ipv6-pod-cidr: "false"
   # Chaining mode is set to portmap, enable health checking
   enable-endpoint-health-checking: "true"
   enable-well-known-identities: "false"
@@ -161,6 +164,14 @@ data:
   synchronize-k8s-nodes: "true"
   policy-audit-mode: "false"
   operator-api-serve-addr: '127.0.0.1:9234'
+
+
+  # A space separated list of iptables chains to disable when installing feeder rules.
+  disable-iptables-feeder-rules: ""
+
+  ipam: "operator"
+  ipv4-pod-cidr: "10.0.0.0/16"
+  node-cidr-mask-size-ipv4: "24"
 ---
 # Source: cilium/charts/agent/templates/clusterrole.yaml
 apiVersion: rbac.authorization.k8s.io/v1
