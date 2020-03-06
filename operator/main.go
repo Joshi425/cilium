@@ -195,6 +195,26 @@ func runOperator(cmd *cobra.Command) {
 		}
 
 		startSynchronizingCiliumNodes(nodeManager)
+	case option.IPAMOperator:
+		if err := startOperatorAllocator(); err != nil {
+			log.WithError(err).Fatal("Unable to start Operator allocator")
+		}
+
+		startSynchronizingCiliumNodes(nodeManager)
+		// Wait until the cilium nodes are fetched.
+		<-k8sCiliumNodesCacheSynced
+
+		// Run this in a go routine because we will need to watch
+		// for nodes. But if the user as also setup kvstore this would
+		// block as the nodeWatcher depends on the KVStore and the KVStore
+		// is only configured bellow.
+		// We can call this function multiple times since it's backed by a
+		// sync.Once
+		go func() {
+			if err := runNodeWatcher(nodeManager); err != nil {
+				log.WithError(err).Error("Unable to setup node watcher")
+			}
+		}()
 	}
 
 	if kvstoreEnabled() {

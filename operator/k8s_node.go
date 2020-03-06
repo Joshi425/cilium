@@ -77,6 +77,19 @@ func runNodeWatcher(nodeManager *ipam.NodeManager) (err error) {
 							if kvstoreEnabled() && option.Config.SyncK8sNodes {
 								ciliumNodeStore.UpdateKeySync(context.TODO(), nodeNew)
 							}
+							switch option.Config.IPAM {
+							case option.IPAMOperator:
+								// If we are running in IPAMOperator mode, it's
+								// the job of the operator to create Cilium node
+								// in k8s. We also don't care about the podCIDRs
+								// allocated by k8s so we set them to nil.
+								// It's safe to do this operation because the
+								// cilium nodes were already synced from k8s
+								// before we start watching for k8s node events.
+								cn := nodeNew.ToCiliumNode()
+								cn.Spec.IPAM.PodCIDRs = nil
+								nodeManager.Create(cn)
+							}
 							return nil
 						}, serializer.NoRetry)
 					}
@@ -137,7 +150,7 @@ func runNodeWatcher(nodeManager *ipam.NodeManager) (err error) {
 				// present in the k8sNodeStore.
 
 				switch option.Config.IPAM {
-				case option.IPAMENI, option.IPAMAzure:
+				case option.IPAMENI, option.IPAMAzure, option.IPAMOperator:
 					nodes, err := ciliumK8sClient.CiliumV2().CiliumNodes().List(context.TODO(), meta_v1.ListOptions{})
 					if err != nil {
 						log.WithError(err).Warning("Unable to list CiliumNodes. Won't clean up stale CiliumNodes")
