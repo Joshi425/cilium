@@ -9,13 +9,13 @@ all: $(TARGET)
 
 $(TARGET): $(SOURCES)
 	@$(ECHO_GO)
-	$(QUIET)$(GO) build $(GOBUILD) -o $(TARGET)
+	$(QUIET)$(GO_BUILD) -o $(TARGET)
 	strip $(TARGET)
 
 clean:
 	@$(ECHO_CLEAN) $(notdir $(shell pwd))
 	-$(QUIET)rm -f $(TARGET)
-	$(QUIET)$(GO) clean $(GOCLEAN)
+	$(QUIET)$(GO_CLEAN)
 
 install:
 	$(QUIET)$(INSTALL) -m 0755 -d $(DESTDIR)$(BINDIR)

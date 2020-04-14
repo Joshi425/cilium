@@ -8,14 +8,14 @@ SOURCES := $(shell find ../../api/v1 ../../common ../../pkg/client ../../pkg/end
 
 $(TARGET): $(SOURCES)
 	@$(ECHO_GO)
-	$(QUIET)$(GO) build $(GOBUILD) -o $(TARGET)
+	$(QUIET)$(GO_BUILD) -o $(TARGET)
 
 run:
 	./cilium-docker -d
 
 clean:
 	@$(ECHO_CLEAN)
-	$(QUIET)$(GO) clean $(GOCLEAN)
+	$(QUIET)$(GO_CLEAN)
 	-$(QUIET) rm -f $(TARGET)
 
 install:

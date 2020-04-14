@@ -11,7 +11,7 @@ SOURCES := $(shell find ../api/v1/health ../pkg/health cmd . \
 	\( -name '*.go' ! -name '*_test.go' $(foreach dir,$(SUBDIRS),! -path './$(dir)/*') \) )
 $(TARGET): $(SOURCES)
 	@$(ECHO_GO)
-	$(QUIET)$(GO) build $(GOBUILD) -o $(TARGET)
+	$(QUIET)$(GO_BUILD) -o $(TARGET)
 
 $(SUBDIRS): force
 	@ $(MAKE) $(SUBMAKEOPTS) -C $@ all
@@ -20,7 +20,7 @@ clean:
 	@$(ECHO_CLEAN)
 	$(QUIET)for i in $(SUBDIRS); do $(MAKE) $(SUBMAKEOPTS) -C $$i clean; done
 	-$(QUIET)rm -f $(TARGET)
-	$(QUIET)$(GO) clean $(GOCLEAN)
+	$(QUIET)$(GO_CLEAN)
 
 install:
 	$(QUIET)for i in $(SUBDIRS); do $(MAKE) $(SUBMAKEOPTS) -C $$i install; done

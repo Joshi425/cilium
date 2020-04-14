@@ -6,7 +6,7 @@ LINKS=cilium-node-monitor
 SOURCES := $(shell find ../api ../common ../daemon ../pkg . \( -name '*.go'  ! -name '*_test.go' \))
 $(TARGET): $(SOURCES) ../Dockerfile ../Makefile ../Makefile.defs Makefile
 	@$(ECHO_GO)
-	$(QUIET)$(GO) build $(GOBUILD) -o $(TARGET)
+	$(QUIET)$(GO_BUILD) -o $(TARGET)
 
 all: $(TARGET) links
 
@@ -16,7 +16,7 @@ links:
 clean:
 	@$(ECHO_CLEAN)
 	$(QUIET)rm -f $(TARGET)
-	$(QUIET)$(GO) clean $(GOCLEAN)
+	$(QUIET)$(GO_CLEAN)
 	$(foreach link,$(LINKS), $(QUIET)rm -f $(link);)
 
 ifeq ("$(PKG_BUILD)","")

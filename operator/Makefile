@@ -5,14 +5,14 @@ TARGET=cilium-operator
 SOURCES := $(shell find ../pkg . \( -name '*.go'  ! -name '*_test.go' \))
 $(TARGET): $(SOURCES)
 	@$(ECHO_GO)
-	$(QUIET)$(GO) build $(GOBUILD) -o $(TARGET)
+	$(QUIET)$(GO_BUILD) -o $(TARGET)
 
 all: $(TARGET)
 
 clean:
 	@$(ECHO_CLEAN)
 	$(QUIET)rm -f $(TARGET)
-	$(GO) clean $(GOCLEAN)
+	$(GO_CLEAN)
 
 install:
 	groupadd -f cilium

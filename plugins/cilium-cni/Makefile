@@ -6,7 +6,7 @@ TARGET=cilium-cni
 
 clean:
 	@$(ECHO_CLEAN)
-	$(QUIET)$(GO) clean $(GOCLEAN)
+	$(QUIET)$(GO_CLEAN)
 	-$(QUIET)rm -f $(TARGET)
 
 SOURCES := $(shell find ../../api/v1/models ../../common ../../pkg/client ../../pkg/endpoint . -name '*.go')
@@ -14,7 +14,7 @@ SOURCES := $(shell find ../../api/v1/models ../../common ../../pkg/client ../../
 $(TARGET): $(SOURCES)
 	@$(ECHO_GO)
 	# Compile without cgo to allow use of cilium-cni on non-glibc platforms - see GH-5055
-	$(QUIET)$(GO) build $(GOBUILD) -o $(TARGET)
+	$(QUIET)$(GO_BUILD) -o $(TARGET)
 
 install:
 	$(QUIET)$(INSTALL) -m 0755 -d $(DESTDIR)$(CNICONFDIR)
